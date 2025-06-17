@@ -88,14 +88,18 @@ async def create_post(post: Post):  # Using Body to parse the request body
 
 # UPDATE requests
 @app.put("/posts/{id}", status_code=status.HTTP_202_ACCEPTED)
-def update_post(id: int, post: Post):
+def update_post(id: int, post: Post):  # Using Body to parse the request body
+    # check whether post exists and raise error if it does not
     if not find_post(id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} not found"
         )
+    # find the index in the array that has required id
     index = find_index_post(id)
+    # update the post at that index
     my_posts[index] = post.dict()
     my_posts[index]["id"] = id  # keep the same id
+    # return the updated post
     return {"updated_post": my_posts[index]}
 
 
