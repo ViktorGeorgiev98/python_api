@@ -55,8 +55,8 @@ def get_post(id: int, response: Response, db: Session = Depends(get_db)):
 async def create_post(
     post: PostCreate,
     db: Session = Depends(get_db),
-    user_id: int = Depends(oauth2.get_current_user),
-):
+    current_user: int = Depends(oauth2.get_current_user),
+):  # Debugging line to check current user
     # Using Body to parse the request body
     # print(post)  # This will print the payload to the console
     # print(post.rating)
@@ -69,7 +69,7 @@ async def create_post(
     # # we need to send status code 201 (created) when a new resource is created
     # conn.commit() Commit the transaction to the database, always required
     # print(**post.dict()) # This will print the dictionary representation of the post
-    new_post = models.Post(**post.dict())  #
+    new_post = models.Post(owner_id=current_user.id, **post.dict())  #
     db.add(new_post)
     db.commit()
     db.refresh(new_post)  # Refresh the instance to get the new ID and other fields
@@ -85,7 +85,7 @@ def update_post(
     id: int,
     updated_post: PostCreate,
     db: Session = Depends(get_db),
-    user_id: int = Depends(oauth2.get_current_user),
+    current_user: int = Depends(oauth2.get_current_user),
 ):  # Using Body to parse the request body
     # cursor.execute(
     #     """UPDATE posts SET title = %s, content = %s, published = %s WHERE id = %s RETURNING *""",
@@ -113,7 +113,7 @@ def update_post(
 def delete_post(
     id: int,
     db: Session = Depends(get_db),
-    user_id: int = Depends(oauth2.get_current_user),
+    current_user: int = Depends(oauth2.get_current_user),
 ):
     # find the index in the array that has required id
     # my_posts.pop(index) # remove the post from the list

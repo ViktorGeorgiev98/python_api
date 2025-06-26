@@ -19,6 +19,7 @@ class PostCreate(PostBase):
 class PostResponse(PostBase):
     created_at: datetime
     id: int
+    owner_id: int
 
 
 # USER RELATED SCHEMAS
