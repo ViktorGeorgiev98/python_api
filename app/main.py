@@ -3,10 +3,23 @@ from app import models
 from app.database import engine
 from .routers import post, user, auth, vote
 from app.config import settings
+from fastapi.middleware.cors import CORSMiddleware
 
+
+# specify the origins that are allowed to access the API
+origins = ["*"]  # Allow all origins, you can specify a list of allowed origins instead
 
 app = FastAPI()
-models.Base.metadata.create_all(bind=engine)  # Create all tables in the database
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods (GET, POST, PUT, DELETE, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
+
+
+# models.Base.metadata.create_all(bind=engine)  # Create all tables in the database
 print("✅ Tables creation triggered")
 
 
