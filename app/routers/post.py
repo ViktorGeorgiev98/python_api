@@ -5,6 +5,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from app import oauth2
 from typing import Optional, List
+from sqlalchemy import func
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
 
@@ -13,11 +14,24 @@ router = APIRouter(prefix="/posts", tags=["Posts"])
 
 
 @router.get("/", response_model=list[PostResponse])
-async def get_posts(db: Session = Depends(get_db)):
+async def get_posts(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(oauth2.get_current_user),
+    limit: int = 10,
+    skip: int = 0,
+):
     # normal sql query to get all posts
     # cursor.execute(""" SELECT * FROM posts """)
     # posts = cursor.fetchall()
-    posts = db.query(models.Post).all()  # Using SQLAlchemy to get all posts
+    posts = (
+        db.query(models.Post).limit(limit).offset(skip).all()
+    )  # Using SQLAlchemy to get all posts
+    results = (
+        db.query(models.Post, func.count(models.Vote.post_id))
+        .join(models.Vote, models.Vote.post_id == models.Post.id, isouter=True)
+        .group_by(models.Post.id)
+        .all()
+    )  # Get all posts from the database
     return posts  # This will return the list of posts
 
 
@@ -100,6 +114,12 @@ def update_post(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} not found"
         )
 
+    if post.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform requested action",
+        )
+
     post_query.update(
         updated_post.dict(),
         synchronize_session=False,
@@ -120,13 +140,19 @@ def delete_post(
     # cursor.execute("""DELETE FROM posts WHERE id = %s RETURNING *""", (str(id),))
     # deleted_post = cursor.fetchone()
     # conn.commit()
-    post = db.query(models.Post).filter(models.Post.id == id)
-    if post.first() is None:
+    post_query = db.query(models.Post).filter(models.Post.id == id)
+    post = post_query.first()  # Get the first post that matches the id
+    if post is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id {id} not found"
         )
 
-    post.delete(synchronize_session=False)
+    if post.owner_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to perform requested action",
+        )
+    post_query.delete(synchronize_session=False)
     db.commit()
     # If the post is deleted successfully, we return a 204 No Content response
     return Response(status_code=status.HTTP_204_NO_CONTENT)
